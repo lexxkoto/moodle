@@ -307,6 +307,18 @@ class assign {
     }
 
     /**
+     * Is hidden grading enabled?
+     *
+     * This just checks the assignment settings. Remember to check
+     * the user has the 'showhiddengrader' capability too
+     *
+     * @return bool
+     */
+    public function is_hidden_grader() {
+        return $this->get_instance()->hidegrader;
+    }
+
+    /**
      * Does an assignment have submission(s) or grade(s) already?
      *
      * @return bool
@@ -625,6 +637,7 @@ class assign {
             $update->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
         }
         $update->blindmarking = $formdata->blindmarking;
+        $update->hidegrader = $formdata->hidegrader;
         $update->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
         if (!empty($formdata->attemptreopenmethod)) {
             $update->attemptreopenmethod = $formdata->attemptreopenmethod;
@@ -991,6 +1004,7 @@ class assign {
             $update->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
         }
         $update->blindmarking = $formdata->blindmarking;
+        $update->hidegrader = $formdata->hidegrader;
         $update->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
         if (!empty($formdata->attemptreopenmethod)) {
             $update->attemptreopenmethod = $formdata->attemptreopenmethod;
@@ -1738,7 +1752,7 @@ class assign {
         //   - No previous notification has been sent.
         //   - If marking workflow is not enabled, the grade was updated in the past 24 hours, or
         //     if marking workflow is enabled, the workflow state is at 'released'.
-        $sql = "SELECT g.id as gradeid, a.course, a.name, a.blindmarking, a.revealidentities,
+        $sql = "SELECT g.id as gradeid, a.course, a.name, a.blindmarking, a.revealidentities, a.hidegrader,
                        g.*, g.timemodified as lastmodified, cm.id as cmid
                  FROM {assign} a
                  JOIN {assign_grades} g ON g.assignment = a.id
@@ -1837,8 +1851,17 @@ class assign {
                     continue;
                 }
 
-                // Need to send this to the student.
+                // Notify the student. Default to the non-anon version.
                 $messagetype = 'feedbackavailable';
+                // Message type needs 'anon' if "hidden grading" is enabled and the student
+                // doesn't have permission to see the grader.
+                if ($submission->hidegrader && !has_capability('mod/assign:showhiddengrader', $contextmodule, $user)) {
+                    $messagetype = 'feedbackavailableanon';
+                    // There's no point in having an "anonymous grader" if the notification email
+                    // comes from them. Send the email from the primary site admin instead.
+                    $grader = get_admin();
+                }
+
                 $eventtype = 'assign_notification';
                 $updatetime = $submission->lastmodified;
                 $modulename = get_string('modulename', 'assign');
@@ -4086,6 +4109,18 @@ class assign {
                                                               $gradingstatus,
                                                               $instance->preventsubmissionnotingroup,
                                                               $usergroups);
+
+            /*
+             * We'll only show the grader's identity if the 'Hide Grader' setting is disabled
+             * or (if it's enabled) the user has the 'Show Hidden Grader' capability.
+             *
+             */
+
+            $showgradername = (
+                    has_capability('mod/assign:showhiddengrader', $this->get_context(), $user) or
+                    !$this->is_hidden_grader()
+            );
+
             if (has_capability('mod/assign:submit', $this->get_context(), $user)) {
                 $o .= $this->get_renderer()->render($submissionstatus);
             }
@@ -4159,6 +4194,9 @@ class assign {
                                                       $this->get_course_module()->id,
                                                       $this->get_return_action(),
                                                       $this->get_return_params());
+                if (!$showgradername) {
+                    $feedbackstatus->grader = false;
+                }
 
                 $o .= $this->get_renderer()->render($feedbackstatus);
             }
