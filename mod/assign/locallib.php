@@ -312,6 +312,18 @@ class assign {
     }
 
     /**
+     * Is hidden grading enabled?
+     *
+     * This just checks the assignment settings. Remember to check
+     * the user has the 'showhiddengrader' capability too
+     *
+     * @return bool
+     */
+    public function is_hidden_grader() {
+        return $this->get_instance()->hidegrader;
+    }
+
+    /**
      * Does an assignment have submission(s) or grade(s) already?
      *
      * @return bool
@@ -635,6 +647,9 @@ class assign {
             $update->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
         }
         $update->blindmarking = $formdata->blindmarking;
+        if (isset($formdata->hidegrader)) {
+            $update->hidegrader = $formdata->hidegrader;
+        }
         $update->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
         if (!empty($formdata->attemptreopenmethod)) {
             $update->attemptreopenmethod = $formdata->attemptreopenmethod;
@@ -999,6 +1014,9 @@ class assign {
         $update->requireallteammemberssubmit = $formdata->requireallteammemberssubmit;
         if (isset($formdata->teamsubmissiongroupingid)) {
             $update->teamsubmissiongroupingid = $formdata->teamsubmissiongroupingid;
+        }
+        if (isset($formdata->hidegrader)) {
+            $update->hidegrader = $formdata->hidegrader;
         }
         $update->blindmarking = $formdata->blindmarking;
         $update->attemptreopenmethod = ASSIGN_ATTEMPT_REOPEN_METHOD_NONE;
@@ -1830,7 +1848,7 @@ class assign {
         //   - No previous notification has been sent.
         //   - If marking workflow is not enabled, the grade was updated in the past 24 hours, or
         //     if marking workflow is enabled, the workflow state is at 'released'.
-        $sql = "SELECT g.id as gradeid, a.course, a.name, a.blindmarking, a.revealidentities,
+        $sql = "SELECT g.id as gradeid, a.course, a.name, a.blindmarking, a.revealidentities, a.hidegrader,
                        g.*, g.timemodified as lastmodified, cm.id as cmid
                  FROM {assign} a
                  JOIN {assign_grades} g ON g.assignment = a.id
@@ -1929,8 +1947,17 @@ class assign {
                     continue;
                 }
 
-                // Need to send this to the student.
+                // Notify the student. Default to the non-anon version.
                 $messagetype = 'feedbackavailable';
+                // Message type needs 'anon' if "hidden grading" is enabled and the student
+                // doesn't have permission to see the grader.
+                if ($submission->hidegrader && !has_capability('mod/assign:showhiddengrader', $contextmodule, $user)) {
+                    $messagetype = 'feedbackavailableanon';
+                    // There's no point in having an "anonymous grader" if the notification email
+                    // comes from them. Send the email from the primary site admin instead.
+                    $grader = get_admin();
+                }
+
                 $eventtype = 'assign_notification';
                 $updatetime = $submission->lastmodified;
                 $modulename = get_string('modulename', 'assign');
@@ -4446,6 +4473,21 @@ class assign {
                                                   $this->get_course_module()->id,
                                                   $this->get_return_action(),
                                                   $this->get_return_params());
+
+            /*
+             * We'll only show the grader's identity if the 'Hide Grader' setting is disabled
+             * or (if it's enabled) the user has the 'Show Hidden Grader' capability.
+             *
+             */
+            $showgradername = (
+                    has_capability('mod/assign:showhiddengrader', $this->context, $user) or
+                    !$this->is_hidden_grader()
+            );
+
+            if (!$showgradername) {
+                $feedbackstatus->grader = false;
+            }
+
             return $feedbackstatus;
         }
         return;
