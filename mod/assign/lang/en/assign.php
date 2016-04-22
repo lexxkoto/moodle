@@ -53,6 +53,7 @@ $string['assign:revealidentities'] = 'Reveal student identities';
 $string['assign:reviewgrades'] = 'Review grades';
 $string['assign:viewblinddetails'] = 'View student identities when blind marking is enabled';
 $string['assign:viewgrades'] = 'View grades';
+$string['assign:showhiddengrader'] = 'See the identity of a hidden grader';
 $string['assign:submit'] = 'Submit assignment';
 $string['assign:view'] = 'View assignment';
 $string['assignfeedback'] = 'Feedback plugin';
@@ -207,6 +208,16 @@ $string['feedbackavailablehtml'] = '{$a->username} has posted some feedback on y
 assignment submission for \'<i>{$a->assignment}</i>\'<br /><br />
 You can see it appended to your <a href="{$a->url}">assignment submission</a>.';
 $string['feedbackavailablesmall'] = '{$a->username} has given feedback for assignment {$a->assignment}';
+$string['feedbackavailableanontext'] = 'You have new feedback on your
+assignment submission for \'{$a->assignment}\'
+
+You can see it appended to your assignment submission:
+
+    {$a->url}';
+$string['feedbackavailableanonhtml'] = 'You have new feedback on your
+assignment submission for \'<i>{$a->assignment}</i>\'<br /><br />
+You can see it appended to your <a href="{$a->url}">assignment submission</a>.';
+$string['feedbackavailableanonsmall'] = 'New feedback for assignment {$a->assignment}';
 $string['feedbackplugins'] = 'Feedback plugins';
 $string['feedbackpluginforgradebook'] = 'Feedback plugin that will push comments to the gradebook';
 $string['feedbackpluginforgradebook_help'] = 'Only one assignment feedback plugin can push feedback into the gradebook.';
@@ -237,6 +248,8 @@ $string['gradingoptions'] = 'Options';
 $string['gradingstatus'] = 'Grading status';
 $string['gradingstudent'] = 'Grading student';
 $string['gradingsummary'] = 'Grading summary';
+$string['hidegrader'] = 'Hide grader identity from students';
+$string['hidegrader_help'] = 'Hides the identity of any user who grades an assignment submission, so students can\'t see who marked their work.';
 $string['hideshow'] = 'Hide/Show';
 $string['hiddenuser'] = 'Participant ';
 $string['instructionfiles'] = 'Instruction files';
